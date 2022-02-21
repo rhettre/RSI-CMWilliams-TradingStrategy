@@ -6,7 +6,7 @@ from threading import Event
 #API Keys
 gemini_public_key = ""  
 gemini_private_key = ""
-taapi_key = ""
+taapi_key=""
 
 #Indicator Variables - based on default values from TradingView. You can update these if you want a more conservative / aggressive strategy.
 RSI_FLOOR = 30
@@ -62,6 +62,7 @@ def _buyBitcoin(buy_size,pub_key, priv_key):
     amount = round((buy_size*0.999)/float(execution_price),tick_size)
     buy = trader.new_order(symbol, str(amount), execution_price, "buy", ["maker-or-cancel"])
     print(f'Maker Buy: {buy}')
+    return amount
 
 #Places limit sell order for 3% higher than the spot price of BTC. Change factor variable for different percentage
 def _sellBitcoin(sell_size,pub_key, priv_key):
@@ -69,22 +70,20 @@ def _sellBitcoin(sell_size,pub_key, priv_key):
     symbol_spot_price = float(trader.get_ticker(symbol)['ask'])
     factor = 1.03
     execution_price = str(round(symbol_spot_price*factor,2))
-    amount = round((sell_size*.999)/float(price),tick_size)
-    sell = trader.new_order(symbol, str(amount), price, "sell", ["maker-or-cancel"])
+    sell = trader.new_order(symbol, str(sell_size), execution_price, "sell", ["maker-or-cancel"])
     print(f'Maker Sell: {sell}')
-    return [btc_amount, price]
-
-#Free Taapi Key is rate limited to 1 request every 15 seconds
-rsi = get_rsi()
-Event().wait(16)
-cci = get_cci()
-Event().wait(16)
-williams = get_williams()
 
 def lambda_handler(event, context):
+    #Free Taapi Key is rate limited to 1 request every 15 seconds
+    rsi = get_rsi()
+    Event().wait(16)
+    cci = get_cci()
+    Event().wait(16)
+    williams = get_williams()
+        
     if rsi < RSI_FLOOR and cci < CCI_FLOOR and williams < WILLIAMS_FLOOR:
-        _buyBitcoin(buy_size, gemini_public_key, gemini_private_key)
-        _sellBitcoin(sell_size, gemini_public_key, gemini_private_key)
+        btc_bought = _buyBitcoin(buy_size, gemini_public_key, gemini_private_key)
+        _sellBitcoin(btc_bought, gemini_public_key, gemini_private_key)
         print("Order's posted")
         print(f"RSI: {rsi}")
         print(f"CCI: {cci}")
