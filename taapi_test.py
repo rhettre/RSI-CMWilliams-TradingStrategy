@@ -26,6 +26,7 @@ WILLIAMS_URL = "willr"
 symbol = "BTCUSD"
 tick_size = 8
 quote_currency_price_increment = 2
+buy_size = 10
 
 def get_rsi():
     response = requests.get(BASE_URL+RSI_URL+AUTH_URL)
