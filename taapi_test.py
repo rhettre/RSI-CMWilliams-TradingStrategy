@@ -3,20 +3,24 @@ import gemini
 import requests 
 from threading import Event
 
+#API Keys
 gemini_public_key = ""  
 gemini_private_key = ""
 taapi_key = ""
 
+#Indicator Variables - based on default values from TradingView. You can update these if you want a more conservative / aggressive strategy.
+RSI_FLOOR = 30
+CCI_FLOOR = -200
+WILLIAMS_FLOOR = -80
+
 #Taapi Variables
-INCLUDE_RSI = True 
 RSI_SYMBOL = "BTC/USDT"
 RSI_INTERVAL = "15m"
-RSI_FLOOR = 40
 BASE_URL = "https://api.taapi.io/"
 AUTH_URL = "?secret="+taapi_key+"&exchange=binance&symbol="+RSI_SYMBOL+"&interval="+RSI_INTERVAL
-WILLIAMS_URL = "willr"
-CCI_URL = "cci"
 RSI_URL = "rsi"
+CCI_URL = "cci"
+WILLIAMS_URL = "willr"
 
 #Gemini Variables
 symbol = "BTCUSD"
@@ -70,13 +74,27 @@ def _sellBitcoin(sell_size,pub_key, priv_key):
     return [btc_amount, price]
 
 #Free Taapi Key is rate limited to 1 request every 15 seconds
-print(get_rsi())
+rsi = get_rsi()
 Event().wait(16)
-print(get_cci())
+cci = get_cci()
 Event().wait(16)
-print(get_williams())
+williams = get_williams()
 
-if get_rsi() < 30:
-    _buyBitcoin(buy_size, gemini_public_key, gemini_private_key)
-    _sellBitcoin(sell_size, gemini_public_key, gemini_private_key)
+def lambda_handler(event, context):
+    if rsi < RSI_FLOOR and cci < CCI_FLOOR and williams < WILLIAMS_FLOOR:
+        _buyBitcoin(buy_size, gemini_public_key, gemini_private_key)
+        _sellBitcoin(sell_size, gemini_public_key, gemini_private_key)
+        print("Order's posted")
+        print(f"RSI: {rsi}")
+        print(f"CCI: {cci}")
+        print(f"Williams: {williams}")
+    else:
+        print("RSI, CCI, Williams Indicators not met")
+        print(f"RSI: {rsi}")
+        print(f"CCI: {cci}")
+        print(f"Williams: {williams}")
 
+    return {
+        'statusCode': 200,
+        'body': json.dumps('End of script')
+    }
